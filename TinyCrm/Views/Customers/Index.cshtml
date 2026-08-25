@@ -1,0 +1,77 @@
+@model IList<TinyCrm.Models.Customer>
+@{
+    ViewBag.Title = "Customers";
+    var search = (string)ViewBag.Search;
+    var status = (string)ViewBag.Status;
+}
+
+<div class="page-header">
+    <h1>Customers</h1>
+    <a href="@Url.Action("Create")" class="btn btn-primary">New customer</a>
+</div>
+
+<div class="toolbar">
+    @using (Html.BeginForm("Index", "Customers", FormMethod.Get, new { @class = "form" }))
+    {
+        <label>
+            Search
+            <input type="text" name="search" value="@search" placeholder="Search name, email, company" />
+        </label>
+        <label>
+            Status
+            <select name="status" onchange="this.form.submit()">
+                <option value="" @(string.IsNullOrEmpty(status) ? "selected" : "")>All</option>
+                <option value="Lead" @(status == "Lead" ? "selected" : "")>Lead</option>
+                <option value="Contact" @(status == "Contact" ? "selected" : "")>Contact</option>
+                <option value="Customer" @(status == "Customer" ? "selected" : "")>Customer</option>
+            </select>
+        </label>
+    }
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="empty">No customers found.</div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Company</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Last Interaction</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in Model)
+            {
+                <tr>
+                    <td><a href="@Url.Action("Details", new { id = customer.Id })">@customer.Name</a></td>
+                    <td>@customer.Company</td>
+                    <td>@customer.Email</td>
+                    <td>@customer.Phone</td>
+                    <td>
+                        @switch (customer.Status)
+                        {
+                            case TinyCrm.Models.CustomerStatus.Lead:<span class="badge badge-lead">@customer.Status.ToString()</span> break;
+                            case TinyCrm.Models.CustomerStatus.Contact:<span class="badge badge-contact">@customer.Status.ToString()</span> break;
+                            case TinyCrm.Models.CustomerStatus.Customer:<span class="badge badge-customer">@customer.Status.ToString()</span> break;
+                        }
+                    </td>
+                    <td>
+                        @(customer.LastInteractionDate.HasValue ? customer.LastInteractionDate.Value.ToString("yyyy-MM-dd") : "—")
+                    </td>
+                    <td class="actions">
+                        <a href="@Url.Action("Edit", new { id = customer.Id })" class="btn btn-secondary btn-sm">Edit</a>
+                        <a href="@Url.Action("Delete", new { id = customer.Id })" class="btn btn-danger btn-sm">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

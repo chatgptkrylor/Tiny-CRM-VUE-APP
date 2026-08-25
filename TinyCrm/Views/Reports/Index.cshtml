@@ -1,0 +1,95 @@
+@using TinyCrm.Models
+@model TinyCrm.Models.ReportViewModel
+@{
+    ViewBag.Title = "Reports";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@functions {
+    public static string BadgeClass(CustomerStatus status)
+    {
+        switch (status)
+        {
+            case CustomerStatus.Lead: return "badge badge-lead";
+            case CustomerStatus.Contact: return "badge badge-contact";
+            case CustomerStatus.Customer: return "badge badge-customer";
+            default: return "badge";
+        }
+    }
+}
+
+<div class="page-header">
+    <h1>Reports</h1>
+    <div class="actions">
+        <a href="@Url.Action("ExportCsv", "Reports")" class="btn btn-primary">Export customers (CSV)</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Status summary</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.StatusSummary)
+            {
+                <tr>
+                    <td><span class="@BadgeClass(row.Status)">@row.Status.ToString()</span></td>
+                    <td>@row.Count</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Interactions by type</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.InteractionTypeSummary)
+            {
+                <tr>
+                    <td>@row.Type.ToString()</td>
+                    <td>@row.Count</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Customers overview</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Company</th>
+                <th>Status</th>
+                <th>Interactions</th>
+                <th>Last interaction</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.Customers)
+            {
+                <tr>
+                    <td><a href="@Url.Action("Details", "Customers", new { id = row.Id })">@row.Name</a></td>
+                    <td>@row.Company</td>
+                    <td><span class="@BadgeClass(row.Status)">@row.Status.ToString()</span></td>
+                    <td>@row.InteractionCount</td>
+                    <td>@(row.LastInteractionDate.HasValue ? row.LastInteractionDate.Value.ToString("yyyy-MM-dd") : "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

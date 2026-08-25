@@ -1,0 +1,103 @@
+@model TinyCrm.Models.Customer
+@{
+    ViewBag.Title = Model.Name;
+}
+
+<div class="page-header">
+    <h1>@Model.Name</h1>
+    <div class="actions">
+        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-secondary">Edit</a>
+        <a href="@Url.Action("Index")" class="btn btn-secondary">Back to list</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="form-grid">
+        <div class="field">
+            <label>Company</label>
+            <div>@(Model.Company ?? "—")</div>
+        </div>
+        <div class="field">
+            <label>Email</label>
+            <div>@(Model.Email ?? "—")</div>
+        </div>
+        <div class="field">
+            <label>Phone</label>
+            <div>@(Model.Phone ?? "—")</div>
+        </div>
+        <div class="field">
+            <label>Status</label>
+            <div>
+                @switch (Model.Status)
+                {
+                    case TinyCrm.Models.CustomerStatus.Lead:<span class="badge badge-lead">@Model.Status.ToString()</span> break;
+                    case TinyCrm.Models.CustomerStatus.Contact:<span class="badge badge-contact">@Model.Status.ToString()</span> break;
+                    case TinyCrm.Models.CustomerStatus.Customer:<span class="badge badge-customer">@Model.Status.ToString()</span> break;
+                }
+            </div>
+        </div>
+        <div class="field">
+            <label>Created</label>
+            <div>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+        </div>
+        <div class="field">
+            <label>Last interaction</label>
+            <div>@(Model.LastInteractionDate.HasValue ? Model.LastInteractionDate.Value.ToString("yyyy-MM-dd") : "—")</div>
+        </div>
+        <div class="field full">
+            <label>Notes</label>
+            <div>@(string.IsNullOrWhiteSpace(Model.Notes) ? "—" : Model.Notes)</div>
+        </div>
+    </div>
+</div>
+
+<div class="page-header">
+    <h2>Interactions</h2>
+    <a href="@Url.Action("Create", "Interactions", new { customerId = Model.Id })" class="btn btn-primary">Log interaction</a>
+</div>
+
+@if (Model.Interactions.Count == 0)
+{
+    <div class="empty">No interactions yet.</div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Subject</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var i in Model.Interactions)
+            {
+                <tr>
+                    <td>@i.InteractionDate.ToString("yyyy-MM-dd")</td>
+                    <td>@i.Type.ToString()</td>
+                    <td>@i.Subject</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(i.Notes) && i.Notes.Length > 80)
+                        {
+                            @i.Notes.Substring(0, 80)<text>…</text>
+                        }
+                        else
+                        {
+                            @i.Notes
+                        }
+                    </td>
+                    <td>
+                        @using (Html.BeginForm("Delete", "Interactions", new { id = i.Id }, FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

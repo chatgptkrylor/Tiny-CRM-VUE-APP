@@ -1,0 +1,11 @@
+[Bb]in/
+[Oo]bj/
+packages/
+TestResults/
+*.user
+*.suo
+.vs/
+node_modules/
+iis_out.log
+iis_err.log
+.applicationhost.config
