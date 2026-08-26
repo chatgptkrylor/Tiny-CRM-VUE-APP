@@ -7,9 +7,10 @@ namespace TinyCrm.Controllers
 {
     public class InteractionsController : Controller
     {
-        public ActionResult Create(int customerId)
+        public ActionResult Create(int? customerId)
         {
-            var customer = DataStore.GetCustomer(customerId);
+            if (!customerId.HasValue) return HttpNotFound();
+            var customer = DataStore.GetCustomer(customerId.Value);
             if (customer == null)
             {
                 return HttpNotFound();
@@ -17,7 +18,7 @@ namespace TinyCrm.Controllers
 
             var model = new Interaction
             {
-                CustomerId = customerId,
+                CustomerId = customerId.Value,
                 InteractionDate = DateTime.Today
             };
 

@@ -2,12 +2,11 @@ using System.Web.Mvc;
 
 namespace TinyCrm.Infrastructure
 {
-    public class AuthAttribute : ActionFilterAttribute
+    public class AuthAttribute : FilterAttribute, IAuthorizationFilter
     {
-        public override void OnActionExecuting(ActionExecutingContext filterContext)
+        public void OnAuthorization(AuthorizationContext filterContext)
         {
             var controller = filterContext.ActionDescriptor.ControllerDescriptor.ControllerName;
-            var action = filterContext.ActionDescriptor.ActionName;
 
             if (controller == "Account") return;
 
@@ -17,10 +16,7 @@ namespace TinyCrm.Infrastructure
                 var url = new UrlHelper(filterContext.RequestContext);
                 var loginUrl = url.Action("Login", "Account", new { returnUrl = filterContext.HttpContext.Request.RawUrl });
                 filterContext.Result = new RedirectResult(loginUrl);
-                return;
             }
-
-            base.OnActionExecuting(filterContext);
         }
     }
 }

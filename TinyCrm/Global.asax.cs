@@ -21,5 +21,13 @@ namespace TinyCrm
         {
             // ensure session exists
         }
+
+        protected void Application_Error(object sender, System.EventArgs e)
+        {
+            var ex = Server.GetLastError();
+            System.IO.File.AppendAllText(
+                System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/errors.log"),
+                System.DateTime.Now.ToString("u") + "  " + ex.GetType().Name + ": " + ex.Message + "\r\n" + ex.StackTrace + "\r\n\r\n");
+        }
     }
 }

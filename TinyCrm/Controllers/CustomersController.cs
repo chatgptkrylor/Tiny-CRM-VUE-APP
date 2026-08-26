@@ -18,7 +18,10 @@ namespace TinyCrm.Controllers
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.Trim();
-                list = list.Where(c => c.Name.Contains(s) || c.Email.Contains(s) || c.Company.Contains(s));
+                list = list.Where(c =>
+                    (c.Name != null && c.Name.Contains(s)) ||
+                    (c.Email != null && c.Email.Contains(s)) ||
+                    (c.Company != null && c.Company.Contains(s)));
             }
 
             if (!string.IsNullOrWhiteSpace(status))
@@ -51,9 +54,10 @@ namespace TinyCrm.Controllers
             return View(model);
         }
 
-        public ActionResult Edit(int id)
+        public ActionResult Edit(int? id)
         {
-            var customer = DataStore.GetCustomer(id);
+            if (!id.HasValue) return HttpNotFound();
+            var customer = DataStore.GetCustomer(id.Value);
             if (customer == null) return HttpNotFound();
             return View(customer);
         }
@@ -71,16 +75,18 @@ namespace TinyCrm.Controllers
             return View(model);
         }
 
-        public ActionResult Details(int id)
+        public ActionResult Details(int? id)
         {
-            var customer = DataStore.GetCustomer(id);
+            if (!id.HasValue) return HttpNotFound();
+            var customer = DataStore.GetCustomer(id.Value);
             if (customer == null) return HttpNotFound();
             return View(customer);
         }
 
-        public ActionResult Delete(int id)
+        public ActionResult Delete(int? id)
         {
-            var customer = DataStore.GetCustomer(id);
+            if (!id.HasValue) return HttpNotFound();
+            var customer = DataStore.GetCustomer(id.Value);
             if (customer == null) return HttpNotFound();
             return View(customer);
         }
