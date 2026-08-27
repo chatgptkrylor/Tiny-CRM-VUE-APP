@@ -2,17 +2,20 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Web.Mvc;
+using TinyCrm.Data.Repositories;
 using TinyCrm.Models;
-using TinyCrm.Models.Repositories;
 
 namespace TinyCrm.Controllers
 {
     public class ReportsController : Controller
     {
+        private readonly CustomerRepository _customers = new CustomerRepository();
+        private readonly InteractionRepository _interactions = new InteractionRepository();
+
         public ActionResult Index()
         {
-            var customers = DataStore.Customers;
-            var interactions = DataStore.Interactions;
+            var customers = _customers.GetAll();
+            var interactions = _interactions.GetAll();
 
             var model = new ReportViewModel();
 
@@ -53,8 +56,8 @@ namespace TinyCrm.Controllers
         [HttpGet]
         public ActionResult ExportCsv()
         {
-            var customers = DataStore.Customers;
-            var interactions = DataStore.Interactions;
+            var customers = _customers.GetAll();
+            var interactions = _interactions.GetAll();
 
             var sb = new StringBuilder();
             sb.AppendLine("Id,Name,Company,Email,Phone,Status,InteractionCount,LastInteraction");

@@ -2,7 +2,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
-using TinyCrm.Models.Repositories;
+using TinyCrm.Data;
 
 namespace TinyCrm
 {
@@ -14,7 +14,7 @@ namespace TinyCrm
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
-            DataStore.Seed();
+            DatabaseSetup.Initialize();
         }
 
         protected void Session_Start(object sender, System.EventArgs e)

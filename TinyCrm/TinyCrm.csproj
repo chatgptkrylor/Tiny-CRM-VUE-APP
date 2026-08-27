@@ -87,6 +87,12 @@
     <Reference Include="Antlr3.Runtime">
       <HintPath>..\packages\Antlr.3.4.1.9004\lib\Antlr3.Runtime.dll</HintPath>
     </Reference>
+    <Reference Include="EntityFramework">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer">
+      <HintPath>..\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
@@ -101,15 +107,15 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\AuthAttribute.cs" />
-    <Compile Include="Infrastructure\PasswordHasher.cs" />
-    <Compile Include="Models\Enums.cs" />
-    <Compile Include="Models\User.cs" />
-    <Compile Include="Models\Customer.cs" />
-    <Compile Include="Models\Interaction.cs" />
     <Compile Include="Models\DashboardViewModel.cs" />
     <Compile Include="Models\ReportViewModel.cs" />
-    <Compile Include="Models\Repositories\DataStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TinyCrm.Data\TinyCrm.Data.csproj">
+      <Project>{D4E5F6A7-B8C9-4DA0-8B1E-2F3456789ABC}</Project>
+      <Name>TinyCrm.Data</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />

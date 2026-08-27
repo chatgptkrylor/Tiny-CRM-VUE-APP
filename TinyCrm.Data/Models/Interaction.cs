@@ -31,6 +31,8 @@ namespace TinyCrm.Models
         [Display(Name = "Logged")]
         public DateTime CreatedAt { get; set; }
 
+        // Display-only convenience property, not part of the EDMX model
+        // and therefore not persisted. Filled in by the repositories.
         [Display(Name = "Customer")]
         public string CustomerName { get; set; }
     }

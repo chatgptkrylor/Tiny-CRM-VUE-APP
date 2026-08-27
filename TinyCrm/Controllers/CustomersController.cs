@@ -1,19 +1,21 @@
 using System;
 using System.Linq;
 using System.Web.Mvc;
+using TinyCrm.Data.Repositories;
 using TinyCrm.Models;
-using TinyCrm.Models.Repositories;
 
 namespace TinyCrm.Controllers
 {
     public class CustomersController : Controller
     {
+        private readonly CustomerRepository _customers = new CustomerRepository();
+
         public ActionResult Index(string search, string status)
         {
             ViewBag.Search = search;
             ViewBag.Status = status;
 
-            var list = DataStore.Customers.AsQueryable();
+            var list = _customers.GetAll().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -47,7 +49,7 @@ namespace TinyCrm.Controllers
         {
             if (ModelState.IsValid)
             {
-                DataStore.AddCustomer(model);
+                _customers.AddCustomer(model);
                 TempData["Message"] = "Customer added.";
                 return RedirectToAction("Index");
             }
@@ -57,7 +59,7 @@ namespace TinyCrm.Controllers
         public ActionResult Edit(int? id)
         {
             if (!id.HasValue) return HttpNotFound();
-            var customer = DataStore.GetCustomer(id.Value);
+            var customer = _customers.GetCustomer(id.Value);
             if (customer == null) return HttpNotFound();
             return View(customer);
         }
@@ -68,7 +70,7 @@ namespace TinyCrm.Controllers
         {
             if (ModelState.IsValid)
             {
-                if (!DataStore.UpdateCustomer(model)) return HttpNotFound();
+                if (!_customers.UpdateCustomer(model)) return HttpNotFound();
                 TempData["Message"] = "Customer updated.";
                 return RedirectToAction("Index");
             }
@@ -78,7 +80,7 @@ namespace TinyCrm.Controllers
         public ActionResult Details(int? id)
         {
             if (!id.HasValue) return HttpNotFound();
-            var customer = DataStore.GetCustomer(id.Value);
+            var customer = _customers.GetCustomer(id.Value);
             if (customer == null) return HttpNotFound();
             return View(customer);
         }
@@ -86,7 +88,7 @@ namespace TinyCrm.Controllers
         public ActionResult Delete(int? id)
         {
             if (!id.HasValue) return HttpNotFound();
-            var customer = DataStore.GetCustomer(id.Value);
+            var customer = _customers.GetCustomer(id.Value);
             if (customer == null) return HttpNotFound();
             return View(customer);
         }
@@ -95,7 +97,7 @@ namespace TinyCrm.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Delete(int id, FormCollection collection)
         {
-            DataStore.DeleteCustomer(id);
+            _customers.DeleteCustomer(id);
             TempData["Message"] = "Customer deleted.";
             return RedirectToAction("Index");
         }

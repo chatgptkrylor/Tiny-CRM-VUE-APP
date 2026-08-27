@@ -1,12 +1,14 @@
 using System.Web.Mvc;
+using TinyCrm.Data.Repositories;
 using TinyCrm.Infrastructure;
 using TinyCrm.Models;
-using TinyCrm.Models.Repositories;
 
 namespace TinyCrm.Controllers
 {
     public class AccountController : Controller
     {
+        private readonly UserRepository _users = new UserRepository();
+
         [HttpGet]
         public ActionResult Login(string returnUrl)
         {
@@ -24,7 +26,7 @@ namespace TinyCrm.Controllers
                 return View(model);
             }
 
-            var user = DataStore.FindUser(model.Username);
+            var user = _users.FindUser(model.Username);
             if (user == null || !PasswordHasher.Verify(model.Password, user.PasswordHash))
             {
                 ModelState.AddModelError("", "Invalid username or password.");

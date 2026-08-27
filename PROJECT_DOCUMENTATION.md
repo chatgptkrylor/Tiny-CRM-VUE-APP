@@ -1,6 +1,6 @@
 # Tiny CRM — Project Documentation
 
-A server-rendered CRM web application built with **ASP.NET MVC 5** on **.NET Framework 4.7.2**, using **Razor views**, **server-side session state**, and an **in-memory data store**. Designed for a one-day assignment scope.
+A server-rendered CRM web application built with **ASP.NET MVC 5** on **.NET Framework 4.7.2**, using **Razor views**, **server-side session state**, and an **Entity Framework 6 middle tier** over SQL Server LocalDB. Designed for a one-day assignment scope.
 
 ---
 
@@ -12,10 +12,10 @@ A server-rendered CRM web application built with **ASP.NET MVC 5** on **.NET Fra
 | Runtime | .NET Framework 4.7.2 |
 | Views | Razor 3.2.9 (`.cshtml`) |
 | Session | InProc server-side session (30-min timeout) |
-| Data | In-memory static `DataStore` (no database) |
+| Data | Entity Framework 6.4.4 (model-first EDMX) over SQL Server LocalDB |
 | Auth | Custom session-based filter (`AuthAttribute`) |
 | Passwords | SHA256 hashing (`PasswordHasher`) |
-| Tests (unit) | MSTest 3.6.1 (28 tests) |
+| Tests (unit + integration) | MSTest 3.6.1 (36 tests) |
 | Tests (e2e) | Playwright + Chromium (45 tests) |
 | Tests (adversarial) | Playwright + Chromium (48 tests) |
 | Server | IIS Express on `http://localhost:54322/` |
@@ -60,7 +60,7 @@ The frontend is **server-rendered Razor** — there is no SPA, no client framewo
 
 | Controller | Actions | Notes |
 |---|---|---|
-| `AccountController` | `Login` (GET/POST), `Logout` (POST) | Validates against `DataStore.Users`, sets `Session["UserId/Username/DisplayName"]` |
+| `AccountController` | `Login` (GET/POST), `Logout` (POST) | Validates via `UserRepository`, sets `Session["UserId/Username/DisplayName"]` |
 | `DashboardController` | `Index` | Builds counts, status/type breakdowns, recent 5, follow-up count |
 | `CustomersController` | `Index`, `Create` (GET/POST), `Edit` (GET/POST), `Details`, `Delete` (GET/POST) | Full CRUD; nullable `int? id` on GET actions for safe 404 |
 | `InteractionsController` | `Create` (GET/POST), `Delete` (POST) | Logs interactions against a customer; future-date guard |
@@ -77,18 +77,25 @@ The frontend is **server-rendered Razor** — there is no SPA, no client framewo
 | `DashboardViewModel` | TotalCustomers, TotalInteractions, CustomersByStatus, InteractionsByType, RecentInteractions, NeedsFollowUps |
 | `ReportViewModel` | StatusSummary, InteractionTypeSummary, Customers |
 
-### Data Store (`Models/Repositories/DataStore.cs`)
-- Static class holding `List<Customer>`, `List<Interaction>`, `List<User>`.
-- Seeded once on first access (`DataStore.Seed()` called in `Application_Start`) with 5 sample customers and 6 interactions.
-- All access is `lock`-thread-safe.
-- **In-memory only** — data resets to seed when IIS Express stops. No persistence.
+### Data Access (`TinyCrm.Data` — Entity Framework 6)
+The middle tier is a separate class library (`TinyCrm.Data`, net472) built model-first:
+- `TinyCrmModel.edmx` — conceptual/store/mapping model; the CSDL, SSDL and MSL are embedded as
+  assembly resources, referenced by the connection string as `res://TinyCrm.Data/TinyCrmModel.*`.
+- `TinyCrmEntities : DbContext` — exposes `DbSet<Customer>`, `DbSet<Interaction>`, `DbSet<User>`.
+- `DbContextFactory` — creates short-lived contexts; tests swap in a dedicated test database.
+- `CustomerRepository` / `InteractionRepository` / `UserRepository` — one context per operation,
+  LINQ-to-Entities queries translated to T-SQL by the EF SqlServer provider.
+- `TinyCrmDatabaseInitializer` + `DatabaseSeeder` — create the database if absent and seed
+  2 users, 5 customers and 6 interactions; wired up from `Application_Start` via `DatabaseSetup.Initialize()`.
+- **Persistent** — data survives application restarts; stored in the `TinyCrm` LocalDB database.
+- Deleting a customer cascades to their interactions (declared in both the store and conceptual models).
 
 ### Infrastructure (`TinyCrm.Infrastructure`)
 
 | File | Role |
 |---|---|
 | `AuthAttribute.cs` | `IAuthorizationFilter` — runs before `ValidateAntiForgeryToken`. Redirects to `/Account/Login` if `Session["UserId"]` is null. Skips `AccountController`. |
-| `PasswordHasher.cs` | SHA256 hash + verify (static helpers). |
+| `PasswordHasher.cs` | SHA256 hash + verify (static helpers). Lives in `TinyCrm.Data`. |
 
 ### Session Handling
 Configured in `Web.config`:
@@ -137,14 +144,17 @@ All non-`Account` routes require a valid session (via `AuthAttribute`).
 
 ## 5. Testing
 
-The project has **three test layers totalling 121 tests — all passing.**
+The project has **three test layers totalling 129 tests — all passing.**
 
-### 5.1 Unit Tests — MSTest (`TinyCrm.Tests/`, 28 tests)
+### 5.1 Unit & Integration Tests — MSTest (`TinyCrm.Tests/`, 36 tests)
 Run with:
 ```powershell
 dotnet test "TinyCrm.sln"
 ```
-- `DataStoreTests.cs` (12) — CRUD operations, interactions, user lookup, follow-up recalculation.
+- `CustomerRepositoryTests.cs` (9) — customer CRUD, cascade delete, interaction ordering.
+- `InteractionRepositoryTests.cs` (6) — add/delete interactions, last-interaction recalculation.
+- `UserRepositoryTests.cs` (4) — user lookup, case-insensitive match, unknown user.
+- `TestDatabaseSetup.cs` (1) — creates/drops a dedicated `TinyCrmTests` LocalDB database per run.
 - `PasswordHasherTests.cs` (7) — SHA256 hash determinism, verify, empty inputs.
 - `ModelValidationTests.cs` (9) — DataAnnotations on `Customer` / `Interaction` (required fields, length, email format).
 
@@ -297,12 +307,18 @@ Tiny-CRM-App/
 │   ├── Web.config                      Session (InProc, 30min), anti-forgery
 │   ├── App_Start/                      RouteConfig, FilterConfig, BundleConfig
 │   ├── Controllers/                    Account, Dashboard, Customers, Interactions, Reports
-│   ├── Models/                         Customer, Interaction, User, Enums, ViewModels
-│   │   └── Repositories/DataStore.cs   In-memory "database" (static lists)
-│   ├── Infrastructure/                 AuthAttribute, PasswordHasher
+│   ├── Models/                         DashboardViewModel, ReportViewModel
+│   ├── Infrastructure/                 AuthAttribute
 │   ├── Views/                          Razor .cshtml files (Account, Customers, Dashboard, Reports, Interactions, Shared)
 │   └── Content/Site.css                Styling
-├── TinyCrm.Tests/                      MSTest unit tests (28)
+├── TinyCrm.Data/                       EF6 middle tier (class library)
+│   ├── TinyCrmModel.edmx               Model-first EDMX (csdl/ssdl/msl embedded)
+│   ├── TinyCrmModel.Context.cs         TinyCrmEntities : DbContext
+│   ├── Models/                         Customer, Interaction, User, Enums
+│   ├── Repositories/                   Customer, Interaction, User repositories
+│   ├── Infrastructure/PasswordHasher.cs
+│   └── DatabaseSeeder / DatabaseSetup / TinyCrmDatabaseInitializer
+├── TinyCrm.Tests/                      MSTest unit + integration tests (36)
 └── e2e/                                Playwright tests (45 + 48)
     ├── run-tests.mjs                   End-to-end functional tests
     └── adversarial.mjs                 Security/edge-case tests
