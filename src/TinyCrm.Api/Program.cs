@@ -12,7 +12,18 @@ builder.Services.AddDbContext<TinyCrmDbContext>(o =>
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+builder.Services.AddSingleton<Microsoft.AspNetCore.Identity.IPasswordHasher<TinyCrm.Api.Models.User>,
+                              Microsoft.AspNetCore.Identity.PasswordHasher<TinyCrm.Api.Models.User>>();
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<TinyCrmDbContext>();
+    db.Database.Migrate();
+    DatabaseSeeder.Seed(db, scope.ServiceProvider
+        .GetRequiredService<Microsoft.AspNetCore.Identity.IPasswordHasher<TinyCrm.Api.Models.User>>());
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
