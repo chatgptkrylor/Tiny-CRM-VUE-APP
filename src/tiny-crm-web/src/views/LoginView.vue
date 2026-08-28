@@ -20,18 +20,23 @@ async function submit() {
 </script>
 
 <template>
-  <main class="login-card">
-    <h1>Tiny CRM</h1>
-    <form @submit.prevent="submit">
-      <label for="Username">Username</label>
-      <input id="Username" name="Username" v-model="username" autocomplete="username" />
+  <div class="login-wrap">
+    <main class="login-card">
+      <h1>Tiny CRM</h1>
+      <form class="form" @submit.prevent="submit">
+        <div class="field">
+          <label for="Username">Username</label>
+          <input id="Username" name="Username" v-model="username" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="Password">Password</label>
+          <input id="Password" name="Password" type="password" v-model="password" autocomplete="current-password" />
+        </div>
 
-      <label for="Password">Password</label>
-      <input id="Password" name="Password" type="password" v-model="password" autocomplete="current-password" />
+        <div v-if="error" class="validation-summary">{{ error }}</div>
 
-      <div v-if="error" class="validation-summary">{{ error }}</div>
-
-      <button type="submit">Sign in</button>
-    </form>
-  </main>
+        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      </form>
+    </main>
+  </div>
 </template>

@@ -37,7 +37,7 @@ onMounted(load)
   </header>
   <main>
     <h1>Customers</h1>
-    <form @submit.prevent="load">
+    <form class="toolbar" @submit.prevent="load">
       <input name="search" v-model="search" placeholder="Search" />
       <select name="status" v-model="status" @change="load">
         <option value="">All statuses</option>
@@ -57,7 +57,7 @@ onMounted(load)
           <td>{{ c.name }}</td>
           <td>{{ c.company }}</td>
           <td>{{ c.email }}</td>
-          <td><span :class="'badge-' + c.status.toLowerCase()">{{ c.status }}</span></td>
+          <td><span :class="['badge', 'badge-' + c.status.toLowerCase()]">{{ c.status }}</span></td>
           <td>{{ c.interactionCount }}</td>
         </tr>
       </tbody>
