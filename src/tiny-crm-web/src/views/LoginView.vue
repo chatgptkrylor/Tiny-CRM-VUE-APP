@@ -21,22 +21,31 @@ async function submit() {
 
 <template>
   <div class="login-wrap">
-    <main class="login-card">
+    <div class="login-card">
       <h1>Tiny CRM</h1>
+      <p class="subtitle">Sign in to continue</p>
+
       <form class="form" @submit.prevent="submit">
+        <div v-if="error" class="validation-summary">{{ error }}</div>
+
         <div class="field">
           <label for="Username">Username</label>
-          <input id="Username" name="Username" v-model="username" autocomplete="username" />
+          <input id="Username" name="Username" v-model="username" autocomplete="username" autofocus />
         </div>
+
         <div class="field">
           <label for="Password">Password</label>
           <input id="Password" name="Password" type="password" v-model="password" autocomplete="current-password" />
         </div>
 
-        <div v-if="error" class="validation-summary">{{ error }}</div>
-
         <button type="submit" class="btn btn-primary btn-block">Sign in</button>
       </form>
-    </main>
+
+      <div class="hint">
+        <strong>Demo accounts:</strong><br />
+        admin / admin123<br />
+        demo / demo123
+      </div>
+    </div>
   </div>
 </template>

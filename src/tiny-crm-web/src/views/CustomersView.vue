@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api } from '../api/client'
-import { useAuth } from '../auth'
-import { useRouter } from 'vue-router'
 
 interface CustomerListItem {
   id: number; name: string; company: string | null; email: string | null
@@ -12,8 +10,6 @@ interface CustomerListItem {
 const customers = ref<CustomerListItem[]>([])
 const search = ref('')
 const status = ref('')
-const auth = useAuth()
-const router = useRouter()
 
 async function load() {
   const params = new URLSearchParams()
@@ -22,45 +18,64 @@ async function load() {
   customers.value = await api<CustomerListItem[]>('/api/customers?' + params.toString())
 }
 
-async function signOut() {
-  await auth.logout()
-  router.push('/login')
+function lastInteraction(c: CustomerListItem) {
+  return c.lastInteractionDate ? c.lastInteractionDate.slice(0, 10) : '—'
 }
 
 onMounted(load)
 </script>
 
 <template>
-  <header>
-    <span>{{ auth.state.user?.displayName }}</span>
-    <button type="button" @click="signOut">Sign out</button>
-  </header>
-  <main>
+  <div class="page-header">
     <h1>Customers</h1>
-    <form class="toolbar" @submit.prevent="load">
-      <input name="search" v-model="search" placeholder="Search" />
-      <select name="status" v-model="status" @change="load">
-        <option value="">All statuses</option>
-        <option value="Lead">Lead</option>
-        <option value="Contact">Contact</option>
-        <option value="Customer">Customer</option>
-      </select>
-      <button type="submit">Filter</button>
-    </form>
+    <button type="button" class="btn btn-primary" disabled>New customer</button>
+  </div>
 
-    <table class="table">
-      <thead>
-        <tr><th>Name</th><th>Company</th><th>Email</th><th>Status</th><th>Interactions</th></tr>
-      </thead>
-      <tbody>
-        <tr v-for="c in customers" :key="c.id">
-          <td>{{ c.name }}</td>
-          <td>{{ c.company }}</td>
-          <td>{{ c.email }}</td>
-          <td><span :class="['badge', 'badge-' + c.status.toLowerCase()]">{{ c.status }}</span></td>
-          <td>{{ c.interactionCount }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </main>
+  <div class="toolbar">
+    <form class="form" @submit.prevent="load">
+      <label>
+        Search
+        <input type="text" name="search" v-model="search" placeholder="Search name, email, company" />
+      </label>
+      <label>
+        Status
+        <select name="status" v-model="status" @change="load">
+          <option value="">All</option>
+          <option value="Lead">Lead</option>
+          <option value="Contact">Contact</option>
+          <option value="Customer">Customer</option>
+        </select>
+      </label>
+      <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+    </form>
+  </div>
+
+  <div v-if="customers.length === 0" class="empty">No customers found.</div>
+  <table v-else class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Company</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Status</th>
+        <th>Last Interaction</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="c in customers" :key="c.id">
+        <td>{{ c.name }}</td>
+        <td>{{ c.company }}</td>
+        <td>{{ c.email }}</td>
+        <td>{{ c.phone }}</td>
+        <td><span :class="['badge', 'badge-' + c.status.toLowerCase()]">{{ c.status }}</span></td>
+        <td>{{ lastInteraction(c) }}</td>
+        <td class="actions">
+          <button type="button" class="btn btn-secondary btn-sm" disabled>Edit</button>
+          <button type="button" class="btn btn-danger btn-sm" disabled>Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </template>
