@@ -17,9 +17,9 @@ async function signOut() {
       <div class="topbar-inner">
         <div class="brand"><RouterLink to="/customers">Tiny CRM</RouterLink></div>
         <nav class="nav">
-          <a href="#" class="disabled" aria-disabled="true" tabindex="-1" @click.prevent>Dashboard</a>
+          <RouterLink to="/dashboard" active-class="active">Dashboard</RouterLink>
           <RouterLink to="/customers" active-class="active">Customers</RouterLink>
-          <a href="#" class="disabled" aria-disabled="true" tabindex="-1" @click.prevent>Reports</a>
+          <RouterLink to="/reports" active-class="active">Reports</RouterLink>
         </nav>
         <div class="user-menu">
           <span class="user-name">{{ auth.state.user.displayName }}</span>

@@ -1,14 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from './auth'
 import LoginView from './views/LoginView.vue'
+import DashboardView from './views/DashboardView.vue'
 import CustomersView from './views/CustomersView.vue'
+import ReportsView from './views/ReportsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/customers' },
     { path: '/login', component: LoginView, meta: { public: true } },
+    { path: '/dashboard', component: DashboardView },
     { path: '/customers', component: CustomersView },
+    { path: '/reports', component: ReportsView },
   ],
 })
 
