@@ -46,6 +46,12 @@ app.UseAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
+
+// Unmatched /api/* must be a genuine 404, never the SPA shell. MapFallback with an
+// explicit "/api/{**path}" pattern is a lower-priority endpoint scoped to that prefix,
+// so real controller routes above still win; only requests nothing else matched land here.
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+
 app.MapFallbackToFile("index.html");
 
 app.Run();

@@ -205,6 +205,7 @@ clears auth state and redirects, covering session expiry.
 | **D5** | Pin the SDK with **`global.json`** to 10.0.400 | Two SDKs installed (8.0.424, 10.0.400); resolution must be deterministic |
 | **D6** | `src/TinyCrm.Api/wwwroot/` build output is **gitignored** | Built SPA must not be committed |
 | **D7** | `LIKE` wildcards in search are NOT escaped; Phase 2 owns the fix | `search` is interpolated into `EF.Functions.Like`, so `%` and `_` act as wildcards where the old app's ordinal `Contains` treated them literally. A **D1-adjacent silent behaviour change** the parity suite cannot detect. Recorded now so it is not rediscovered; Phase 2 escapes them with an `ESCAPE` clause when it builds the search UI |
+| **D8** | Logout is client-side only; a pre-logout cookie stays valid until expiry. Accepted for now, Phase 2 owns revocation if this ever ships for real | ASP.NET Core cookie auth is stateless; real revocation needs an `ITicketStore`. **This is a regression from the MVC original**, which used server-side Session that `Session.Abandon()` genuinely invalidated. Risk is bounded: exploiting it requires already holding the cookie, which `HttpOnly` (no XSS theft), `SameSite=Lax` (no CSRF) and the 30-minute sliding expiry all work against |
 
 ---
 
