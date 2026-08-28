@@ -1,1 +1,0 @@
-{"name":"tiny-crm-e2e","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node run-tests.mjs"},"dependencies":{"playwright":"^1.62.1"}}

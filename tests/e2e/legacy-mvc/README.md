@@ -1,0 +1,1 @@
+These two scripts (`run-tests.mjs` and `adversarial.mjs`) target the OLD ASP.NET MVC 5 app on `http://localhost:54322` and must never be run as-is against the new .NET 10 / Vue port. They are kept only as the specification for the 45 functional + 48 adversarial checks that Phase 5 of the port must reproduce against the new stack.
