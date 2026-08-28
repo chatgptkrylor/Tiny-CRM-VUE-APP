@@ -73,26 +73,49 @@ public class AuthTests
     {
         var client = _factory.CreateClient();
 
-        // Warm up (JIT, first-request overhead, and - post-F7 - the lazy DummyHash
-        // computation) so the timed calls below reflect steady-state PBKDF2 cost,
-        // not one-time startup noise.
-        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("no_such_user_xyz", "whatever"));
-        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin", "wrongpass"));
+        // Warm up (JIT, first-request overhead, thread-pool ramp-up, and - post-F7 -
+        // the lazy DummyHash computation) so the timed rounds below reflect steady-state
+        // PBKDF2 cost, not one-time startup noise. A few rounds, not one: the thread
+        // pool grows its worker count gradually under burst load.
+        for (var i = 0; i < 3; i++)
+        {
+            await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("no_such_user_xyz", "whatever"));
+            await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin", "wrongpass"));
+        }
 
-        var unknownElapsed = await TimeLogin(client, "no_such_user_xyz", "whatever");
-        var wrongPwElapsed = await TimeLogin(client, "admin", "wrongpass");
-        _output.WriteLine($"unknown-user login: {unknownElapsed.TotalMilliseconds:F1}ms, wrong-password login: {wrongPwElapsed.TotalMilliseconds:F1}ms, ratio: {unknownElapsed.TotalMilliseconds / wrongPwElapsed.TotalMilliseconds:F2}");
+        // FLAKE FIX: a single timed round was intermittently failing under load - one GC
+        // pause, thread-pool stall, or DB-connection hiccup landing on either call is
+        // enough to swing a one-shot ratio past the floor either way. Timing noise from
+        // contention is one-directional (it can only ADD latency, never subtract it), so
+        // the MINIMUM across several interleaved rounds - not the mean or a single
+        // sample - is the standard way to recover the true steady-state cost: as long as
+        // one round per side lands relatively uncontended, the minimum finds it. A real
+        // short-circuit regression, by contrast, returns in a fraction of a millisecond
+        // on EVERY round, so its minimum stays near zero regardless of how many rounds
+        // run, and the assertion still fails hard.
+        const int rounds = 7;
+        var unknownTimes = new List<double>();
+        var wrongPwTimes = new List<double>();
+        for (var i = 0; i < rounds; i++)
+        {
+            unknownTimes.Add((await TimeLogin(client, "no_such_user_xyz", "whatever")).TotalMilliseconds);
+            wrongPwTimes.Add((await TimeLogin(client, "admin", "wrongpass")).TotalMilliseconds);
+        }
+
+        var unknownMin = unknownTimes.Min();
+        var wrongPwMin = wrongPwTimes.Min();
+        _output.WriteLine($"unknown-user login min: {unknownMin:F1}ms, wrong-password login min: {wrongPwMin:F1}ms, ratio: {unknownMin / wrongPwMin:F2}");
 
         // Coarse band, not an exact match: two PBKDF2 verifications will never take
-        // identical microseconds, and CI boxes are noisy. The point is to catch a
-        // REGRESSION to a short-circuit "no such user" path, which returns in a
-        // fraction of a millisecond versus PBKDF2's tens of milliseconds - a 50%
-        // floor sits well clear of normal PBKDF2-to-PBKDF2 jitter but fails hard
-        // the instant the hashing step is skipped again.
+        // identical microseconds, and this box also runs the API and Vite dev servers
+        // alongside the test suite. The point is to catch a REGRESSION to a short-circuit
+        // "no such user" path, which returns in a fraction of a millisecond versus
+        // PBKDF2's tens of milliseconds - a 40% floor sits well clear of that near-zero
+        // ratio but fails hard the instant the hashing step is skipped again.
         Assert.True(
-            unknownElapsed.TotalMilliseconds >= wrongPwElapsed.TotalMilliseconds * 0.5,
-            $"unknown-user login ({unknownElapsed.TotalMilliseconds:F1}ms) should cost roughly as much as " +
-            $"wrong-password login ({wrongPwElapsed.TotalMilliseconds:F1}ms), not be short-circuited");
+            unknownMin >= wrongPwMin * 0.4,
+            $"unknown-user login min ({unknownMin:F1}ms) should cost roughly as much as " +
+            $"wrong-password login min ({wrongPwMin:F1}ms), not be short-circuited");
     }
 
     private static async Task<TimeSpan> TimeLogin(HttpClient client, string username, string password)

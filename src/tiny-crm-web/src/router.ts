@@ -4,6 +4,10 @@ import LoginView from './views/LoginView.vue'
 import DashboardView from './views/DashboardView.vue'
 import CustomersView from './views/CustomersView.vue'
 import ReportsView from './views/ReportsView.vue'
+import CustomerFormView from './views/CustomerFormView.vue'
+import CustomerDetailsView from './views/CustomerDetailsView.vue'
+import CustomerDeleteView from './views/CustomerDeleteView.vue'
+import InteractionCreateView from './views/InteractionCreateView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,6 +16,11 @@ const router = createRouter({
     { path: '/login', component: LoginView, meta: { public: true } },
     { path: '/dashboard', component: DashboardView },
     { path: '/customers', component: CustomersView },
+    { path: '/customers/new', component: CustomerFormView },
+    { path: '/customers/:id/edit', component: CustomerFormView },
+    { path: '/customers/:id/delete', component: CustomerDeleteView },
+    { path: '/customers/:id', component: CustomerDetailsView },
+    { path: '/interactions/new', component: InteractionCreateView },
     { path: '/reports', component: ReportsView },
   ],
 })

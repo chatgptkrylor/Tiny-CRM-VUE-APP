@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { api } from '../api/client'
+import { takeFlash } from '../flash'
 
 interface CustomerListItem {
   id: number; name: string; company: string | null; email: string | null
@@ -10,6 +11,7 @@ interface CustomerListItem {
 const customers = ref<CustomerListItem[]>([])
 const search = ref('')
 const status = ref('')
+const successMessage = ref<string | null>(null)
 
 async function load() {
   const params = new URLSearchParams()
@@ -36,13 +38,18 @@ function submitNow() {
   load()
 }
 
-onMounted(load)
+onMounted(() => {
+  successMessage.value = takeFlash()
+  load()
+})
 </script>
 
 <template>
+  <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+
   <div class="page-header">
     <h1>Customers</h1>
-    <button type="button" class="btn btn-primary" disabled>New customer</button>
+    <RouterLink to="/customers/new" class="btn btn-primary">New customer</RouterLink>
   </div>
 
   <div class="toolbar">
@@ -78,15 +85,15 @@ onMounted(load)
     </thead>
     <tbody>
       <tr v-for="c in customers" :key="c.id">
-        <td>{{ c.name }}</td>
+        <td><RouterLink :to="`/customers/${c.id}`">{{ c.name }}</RouterLink></td>
         <td>{{ c.company }}</td>
         <td>{{ c.email }}</td>
         <td>{{ c.phone }}</td>
         <td><span :class="['badge', 'badge-' + c.status.toLowerCase()]">{{ c.status }}</span></td>
         <td>{{ lastInteraction(c) }}</td>
         <td class="actions">
-          <button type="button" class="btn btn-secondary btn-sm" disabled>Edit</button>
-          <button type="button" class="btn btn-danger btn-sm" disabled>Delete</button>
+          <RouterLink :to="`/customers/${c.id}/edit`" class="btn btn-secondary btn-sm">Edit</RouterLink>
+          <RouterLink :to="`/customers/${c.id}/delete`" class="btn btn-danger btn-sm">Delete</RouterLink>
         </td>
       </tr>
     </tbody>

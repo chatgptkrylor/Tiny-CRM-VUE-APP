@@ -84,7 +84,7 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr v-for="row in data.customers" :key="row.id">
-            <td>{{ row.name }}</td>
+            <td><RouterLink :to="`/customers/${row.id}`">{{ row.name }}</RouterLink></td>
             <td>{{ row.company }}</td>
             <td><span :class="['badge', 'badge-' + row.status.toLowerCase()]">{{ row.status }}</span></td>
             <td>{{ row.interactionCount }}</td>

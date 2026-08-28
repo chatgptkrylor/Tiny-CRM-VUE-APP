@@ -36,7 +36,7 @@ onMounted(async () => {
     <div class="page-header">
       <h1>Dashboard</h1>
       <div class="actions">
-        <button type="button" class="btn btn-primary" disabled>New customer</button>
+        <RouterLink to="/customers/new" class="btn btn-primary">New customer</RouterLink>
       </div>
     </div>
 
@@ -94,7 +94,7 @@ onMounted(async () => {
             <td>{{ i.interactionDate.slice(0, 10) }}</td>
             <td>{{ i.type }}</td>
             <td>{{ i.subject }}</td>
-            <td>{{ i.customerName }}</td>
+            <td><RouterLink :to="`/customers/${i.customerId}`">{{ i.customerName }}</RouterLink></td>
           </tr>
         </tbody>
       </table>
