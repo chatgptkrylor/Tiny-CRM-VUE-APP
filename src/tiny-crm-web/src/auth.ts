@@ -3,7 +3,7 @@ import { api, ApiError } from './api/client'
 
 export interface User { id: number; username: string; displayName: string }
 
-const state = reactive<{ user: User | null; ready: boolean }>({ user: null, ready: false })
+export const state = reactive<{ user: User | null; ready: boolean }>({ user: null, ready: false })
 
 export function useAuth() {
   return {

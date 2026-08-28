@@ -17,11 +17,14 @@ public class AuthController : ControllerBase
     private readonly TinyCrmDbContext _db;
     private readonly IPasswordHasher<User> _hasher;
 
-    // Computed once at class level: a real PBKDF2 hash to verify against when the
-    // user does not exist, so a missing username costs the same as a wrong password
-    // and cannot be distinguished by timing.
-    private static readonly string DummyHash =
-        new PasswordHasher<User>().HashPassword(new User(), "dummy-password-for-timing");
+    // A real hash to verify against when the user does not exist, so a missing
+    // username costs the same as a wrong password and cannot be distinguished
+    // by timing. Lazily built from the INJECTED hasher (not a fresh
+    // PasswordHasher<User>()) so that if PasswordHasherOptions is ever
+    // reconfigured (e.g. a higher iteration count), the dummy tracks that cost
+    // instead of silently reopening the timing gap. Computed once per process.
+    private static string? _dummyHash;
+    private string DummyHash => _dummyHash ??= _hasher.HashPassword(new User(), "dummy-password-for-timing");
 
     public AuthController(TinyCrmDbContext db, IPasswordHasher<User> hasher)
     {

@@ -40,28 +40,50 @@ public class SeedTests
     [Fact]
     public void DeletingCustomer_CascadesToInteractions()
     {
-        _factory.CreateClient();
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<TinyCrmDbContext>();
+        _factory.CreateClient();   // boots the app: migrate + seed
+        int id;
 
-        // Creates its own data: deleting a SEEDED customer would break the
-        // "5 seeded customers" assertion in CustomersTests (shared database).
-        var customer = new Models.Customer { Name = "Cascade Target", Status = Models.CustomerStatus.Lead, CreatedAt = DateTime.Now };
-        customer.Interactions.Add(new Models.Interaction
+        // Scope 1: create and save a customer with a child interaction. Both are
+        // discarded with this scope, so nothing here is tracked afterwards.
+        using (var scope = _factory.Services.CreateScope())
         {
-            Type = Models.InteractionType.Note,
-            Subject = "Cascade child",
-            InteractionDate = DateTime.Today,
-            CreatedAt = DateTime.Now,
-        });
-        db.Customers.Add(customer);
-        db.SaveChanges();
-        var id = customer.Id;
+            var db = scope.ServiceProvider.GetRequiredService<TinyCrmDbContext>();
 
-        db.Customers.Remove(customer);
-        db.SaveChanges();
+            // Creates its own data: deleting a SEEDED customer would break the
+            // "5 seeded customers" assertion in CustomersTests (shared database).
+            var customer = new Models.Customer { Name = "Cascade Target", Status = Models.CustomerStatus.Lead, CreatedAt = DateTime.Now };
+            customer.Interactions.Add(new Models.Interaction
+            {
+                Type = Models.InteractionType.Note,
+                Subject = "Cascade child",
+                InteractionDate = DateTime.Today,
+                CreatedAt = DateTime.Now,
+            });
+            db.Customers.Add(customer);
+            db.SaveChanges();
+            id = customer.Id;
+        }
 
-        Assert.Empty(db.Interactions.Where(i => i.CustomerId == id));
-        Assert.Equal(5, db.Customers.Count());   // seed data untouched
+        // Scope 2: a FRESH DbContext loads only the customer, no Include, so the
+        // child interaction is never tracked here. Removing the customer in this
+        // scope can only delete the interaction via the database's own
+        // ON DELETE CASCADE - EF's client-side cascade needs the child tracked,
+        // which it isn't. This is what actually pins the database behaviour.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TinyCrmDbContext>();
+            var customer = db.Customers.Single(c => c.Id == id);
+            db.Customers.Remove(customer);
+            db.SaveChanges();
+        }
+
+        // Scope 3: a THIRD fresh DbContext confirms the interaction is really
+        // gone from the database, not just untracked in memory.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TinyCrmDbContext>();
+            Assert.Empty(db.Interactions.Where(i => i.CustomerId == id));
+            Assert.Equal(5, db.Customers.Count());   // seed data untouched
+        }
     }
 }
