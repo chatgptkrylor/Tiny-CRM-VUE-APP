@@ -19,10 +19,6 @@ node_modules/
 test-results/
 playwright-report/
 
-# NuGet packages directory (packages.config style)
-packages/
-!packages/repositories.config
-
 # Local databases
 *.mdf
 *.ldf
@@ -31,5 +27,11 @@ packages/
 *.log
 *.tmp
 
-# IIS Express local config
-.applicationhost.config
+# .NET 10 port
+src/TinyCrm.Api/bin/
+src/TinyCrm.Api/obj/
+src/TinyCrm.Api/wwwroot/
+tests/TinyCrm.Api.Tests/bin/
+tests/TinyCrm.Api.Tests/obj/
+src/tiny-crm-web/node_modules/
+src/tiny-crm-web/dist/
