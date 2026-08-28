@@ -45,4 +45,23 @@ public class AuthTests
         var me = await client.GetFromJsonAsync<UserDto>("/api/auth/me");
         Assert.Equal("admin", me!.Username);
     }
+
+    [Fact]
+    public async Task Login_UnknownUser_And_WrongPassword_AreIndistinguishable()
+    {
+        var client = _factory.CreateClient();
+        var unknown = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("no_such_user_xyz", "whatever"));
+        var wrongPw = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin", "wrongpass"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
+        Assert.Equal(wrongPw.StatusCode, unknown.StatusCode);
+
+        // [ApiController]'s default ProblemDetails body embeds a fresh "traceId" per
+        // request (an ambient correlation nonce, unrelated to whether the user exists),
+        // so a raw string compare must ignore it. Everything else in the body must match.
+        Assert.Equal(StripTraceId(await wrongPw.Content.ReadAsStringAsync()), StripTraceId(await unknown.Content.ReadAsStringAsync()));
+    }
+
+    private static string StripTraceId(string body) =>
+        System.Text.RegularExpressions.Regex.Replace(body, "\"traceId\":\"[^\"]*\"", "\"traceId\":\"\"");
 }

@@ -17,6 +17,12 @@ public class AuthController : ControllerBase
     private readonly TinyCrmDbContext _db;
     private readonly IPasswordHasher<User> _hasher;
 
+    // Computed once at class level: a real PBKDF2 hash to verify against when the
+    // user does not exist, so a missing username costs the same as a wrong password
+    // and cannot be distinguished by timing.
+    private static readonly string DummyHash =
+        new PasswordHasher<User>().HashPassword(new User(), "dummy-password-for-timing");
+
     public AuthController(TinyCrmDbContext db, IPasswordHasher<User> hasher)
     {
         _db = db;
@@ -31,10 +37,11 @@ public class AuthController : ControllerBase
 
         // Case-insensitive by SQL Server default collation, matching the MVC app.
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == req.Username);
-        if (user is null) return Unauthorized();
 
-        var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password);
-        if (result == PasswordVerificationResult.Failed) return Unauthorized();
+        // Always verify a hash, even when the user is absent, so a missing username
+        // costs the same as a wrong password and cannot be distinguished by timing.
+        var result = _hasher.VerifyHashedPassword(user ?? new User(), user?.PasswordHash ?? DummyHash, req.Password);
+        if (user is null || result == PasswordVerificationResult.Failed) return Unauthorized();
 
         var claims = new List<Claim>
         {
@@ -60,8 +67,9 @@ public class AuthController : ControllerBase
     public IActionResult Me()
     {
         if (User.Identity?.IsAuthenticated != true) return Unauthorized();
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)) return Unauthorized();
         return Ok(new UserDto(
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),
+            id,
             User.FindFirstValue(ClaimTypes.Name)!,
             User.FindFirstValue("displayName")!));
     }
