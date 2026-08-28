@@ -127,7 +127,7 @@ async function main() {
   await pageB.waitForURL(/\/customers/)
   const xssPayload = '<script>window.__xss_fired = true</script><img src=x onerror="window.__xss_fired=true">'
   await pageB.fill('input[name="search"]', xssPayload)
-  await pageB.click('button[type="submit"]')
+  // SPA now filters as-you-type (debounced ~300ms) - no submit button to click any more.
   await pageB.waitForTimeout(500)
   const xssFired = await pageB.evaluate(() => window.__xss_fired === true)
   const bodyHtml = await pageB.content()

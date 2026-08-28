@@ -40,14 +40,35 @@ a:hover { text-decoration: underline; }
 .table tr:last-child td { border-bottom: none; }
 .table tr:hover { background: #f8fafc; }
 
-.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.toolbar form { display: flex; gap: 6px; flex-wrap: wrap; }
+.toolbar { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar form { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
 
 .form .field { margin-bottom: 12px; }
-.form label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px; }
-.form input[type="text"], .form input[type="email"], .form input[type="password"], .form input[type="date"], .form input[type="search"], .form input[type="tel"], .form select, .form textarea { width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-family: inherit; }
-.form input:focus, .form select:focus, .form textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
-.form textarea { min-height: 90px; resize: vertical; }
+.form label, .toolbar label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+
+/* Every input/select/textarea inside a .field or .toolbar gets identical sizing,
+   regardless of type (or a missing type attribute - CSS [type=...] selectors only
+   match an attribute that's actually present in the markup, so an input with no
+   type falls through to the browser default `size` unless matched generically). */
+.form input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.form select,
+.form textarea,
+.toolbar input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.toolbar select,
+.toolbar textarea {
+  width: 100%;
+  height: 36px;
+  padding: 7px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.form input:focus, .form select:focus, .form textarea:focus,
+.toolbar input:focus, .toolbar select:focus, .toolbar textarea:focus {
+  outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+.form textarea, .toolbar textarea { height: auto; min-height: 90px; resize: vertical; }
 .field-error, .validation-summary { color: #b91c1c; font-size: 12px; }
 .validation-summary { border: 1px solid #fecaca; background: #fef2f2; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
 

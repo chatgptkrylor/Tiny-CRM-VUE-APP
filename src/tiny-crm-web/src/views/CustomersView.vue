@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { api } from '../api/client'
 
 interface CustomerListItem {
@@ -22,6 +22,20 @@ function lastInteraction(c: CustomerListItem) {
   return c.lastInteractionDate ? c.lastInteractionDate.slice(0, 10) : '—'
 }
 
+// SPA filtering: no server round-trip needed, so no submit button - just
+// debounce as-you-type search. Enter still works via the form's submit handler.
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+watch(search, () => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(load, 300)
+})
+onUnmounted(() => clearTimeout(debounceTimer))
+
+function submitNow() {
+  clearTimeout(debounceTimer)
+  load()
+}
+
 onMounted(load)
 </script>
 
@@ -32,7 +46,7 @@ onMounted(load)
   </div>
 
   <div class="toolbar">
-    <form class="form" @submit.prevent="load">
+    <form class="form" @submit.prevent="submitNow">
       <label>
         Search
         <input type="text" name="search" v-model="search" placeholder="Search name, email, company" />
@@ -46,7 +60,6 @@ onMounted(load)
           <option value="Customer">Customer</option>
         </select>
       </label>
-      <button type="submit" class="btn btn-secondary btn-sm">Search</button>
     </form>
   </div>
 

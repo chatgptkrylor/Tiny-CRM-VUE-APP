@@ -30,7 +30,7 @@ async function submit() {
 
         <div class="field">
           <label for="Username">Username</label>
-          <input id="Username" name="Username" v-model="username" autocomplete="username" autofocus />
+          <input id="Username" name="Username" type="text" v-model="username" autocomplete="username" autofocus />
         </div>
 
         <div class="field">
