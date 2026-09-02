@@ -2,12 +2,19 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using TinyCrm.Api.Data;
 
+// The model stores wall-clock local times (DatabaseSeeder uses DateTime.Now, and
+// InteractionDate is a plain calendar date). Npgsql's default maps DateTime to
+// "timestamp with time zone", which REJECTS any DateTime whose Kind is Local. This
+// switch keeps DateTime mapped to "timestamp without time zone", which is what the
+// SQL Server datetime2 columns were, so no model or seeder change is needed.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://localhost:5174");
 
 builder.Services.AddDbContext<TinyCrmDbContext>(o =>
-    o.UseSqlServer(builder.Configuration.GetConnectionString("TinyCrmVue")));
+    o.UseNpgsql(builder.Configuration.GetConnectionString("TinyCrmVue")));
 
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

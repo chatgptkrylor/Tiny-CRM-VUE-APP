@@ -38,8 +38,12 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Password))
             return Unauthorized();
 
-        // Case-insensitive by SQL Server default collation, matching the MVC app.
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == req.Username);
+        // The MVC app matched usernames case-insensitively, which SQL Server's default
+        // collation gave for free; Postgres compares case-SENSITIVELY, so it has to be
+        // explicit. Deliberately lower() and not ILIKE: ILIKE would treat a username of
+        // "%" as a wildcard matching the first user in the table.
+        var username = req.Username.ToLower();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == username);
 
         // Always verify a hash, even when the user is absent, so a missing username
         // costs the same as a wrong password and cannot be distinguished by timing.

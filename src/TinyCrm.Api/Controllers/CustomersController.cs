@@ -29,10 +29,12 @@ public class CustomersController : ControllerBase
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
-            // Translated to SQL LIKE — case-insensitive under the default collation (D1).
-            q = q.Where(c => EF.Functions.Like(c.Name, $"%{s}%")
-                          || (c.Email != null   && EF.Functions.Like(c.Email, $"%{s}%"))
-                          || (c.Company != null && EF.Functions.Like(c.Company, $"%{s}%")));
+            // ILIKE, not LIKE: SQL Server's default collation made LIKE case-insensitive,
+            // but Postgres LIKE is case-SENSITIVE, which would silently undo D1. ILIKE is
+            // the Postgres equivalent and keeps the same % / _ wildcard passthrough (D7).
+            q = q.Where(c => EF.Functions.ILike(c.Name, $"%{s}%")
+                          || (c.Email != null   && EF.Functions.ILike(c.Email, $"%{s}%"))
+                          || (c.Company != null && EF.Functions.ILike(c.Company, $"%{s}%")));
         }
 
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<CustomerStatus>(status, true, out var st))
