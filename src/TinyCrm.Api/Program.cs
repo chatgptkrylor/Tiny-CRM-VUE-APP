@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Nest;
 using TinyCrm.Api.Data;
+using TinyCrm.Api.Services;
 
 // The model stores wall-clock local times (DatabaseSeeder uses DateTime.Now, and
 // InteractionDate is a plain calendar date). Npgsql's default maps DateTime to
@@ -15,6 +17,25 @@ builder.WebHost.UseUrls("http://localhost:5174");
 
 builder.Services.AddDbContext<TinyCrmDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("TinyCrmVue")));
+
+// --- Elasticsearch wiring ---
+// When ElasticSearch__Url is set (default http://localhost:9200) the real service is
+// registered; otherwise a NoOp fallback is used so the 41 xunit tests keep passing
+// without a running ES instance.
+var esUrl = builder.Configuration["ElasticSearch:Url"] ?? "http://localhost:9200";
+if (!string.IsNullOrWhiteSpace(esUrl))
+{
+    var settings = new ConnectionSettings(new Uri(esUrl))
+        .DefaultIndex("tinycrm-customers")
+        .EnableApiVersioningHeader();
+    var client = new ElasticClient(settings);
+    builder.Services.AddSingleton<IElasticClient>(client);
+    builder.Services.AddScoped<IElasticSearchService, ElasticSearchService>();
+}
+else
+{
+    builder.Services.AddScoped<IElasticSearchService, NoOpElasticSearchService>();
+}
 
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -45,6 +66,17 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     DatabaseSeeder.Seed(db, scope.ServiceProvider
         .GetRequiredService<Microsoft.AspNetCore.Identity.IPasswordHasher<TinyCrm.Api.Models.User>>());
+
+    // Ensure the ES index exists and bulk-index all customers after seeding.
+    var esService = scope.ServiceProvider.GetRequiredService<IElasticSearchService>();
+    await esService.EnsureIndexExistsAsync();
+    var allCustomers = await db.Customers.AsNoTracking()
+        .Include(c => c.Interactions)
+        .ToListAsync();
+    await esService.BulkIndexAllAsync(allCustomers);
+
+    // Wire up the DbContext's static reference so SaveChangesAsync can sync.
+    TinyCrmDbContext.SetElasticSearchService(esService);
 }
 
 app.UseAuthentication();

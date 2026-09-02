@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TinyCrm.Api.Data;
 using TinyCrm.Api.Dtos;
 using TinyCrm.Api.Models;
+using TinyCrm.Api.Services;
 
 namespace TinyCrm.Api.Controllers;
 
@@ -13,7 +14,8 @@ namespace TinyCrm.Api.Controllers;
 public class CustomersController : ControllerBase
 {
     private readonly TinyCrmDbContext _db;
-    public CustomersController(TinyCrmDbContext db) => _db = db;
+    private readonly IElasticSearchService _es;
+    public CustomersController(TinyCrmDbContext db, IElasticSearchService es) => (_db, _es) = (db, es);
 
     // Largest page a caller may request. Without a cap, ?pageSize=99999999 is a
     // cheap way to make the server materialise the whole table into memory.
@@ -24,6 +26,47 @@ public class CustomersController : ControllerBase
         [FromQuery] string? search, [FromQuery] string? status,
         [FromQuery] int page = 1, [FromQuery] int? pageSize = null)
     {
+        // --- Elasticsearch fast-path -------------------------------------------------
+        // When a search term is present, delegate to ES for full-text matching across
+        // Name, Company, Email, Notes, InteractionSubjects and InteractionNotes.
+        // The NoOp service returns an empty array, which signals us to fall back to EF.
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var (esIds, esTotal) = await _es.SearchAsync(
+                search, status, page, pageSize ?? 0, pageSize.HasValue);
+
+            if (esIds.Length > 0)
+            {
+                // Fetch the matching customers from EF, preserving ES ranking.
+                var size = pageSize is > 0 ? Math.Min(pageSize.Value, MaxPageSize) : esIds.Length;
+
+                if (pageSize is > 0)
+                    Response.Headers["X-Total-Count"] = esTotal.ToString();
+
+                // Fetch from EF using the ES-ordered ids.  EF does not guarantee ordering
+                // by the IN list, so we re-order in memory to match ES ranking.
+                var idSet = esIds.ToHashSet();
+                var fetched = await _db.Customers.AsNoTracking()
+                    .Where(c => idSet.Contains(c.Id))
+                    .Select(c => new CustomerListItem(
+                        c.Id, c.Name, c.Company, c.Email, c.Phone,
+                        c.Status, c.LastInteractionDate, c.Interactions.Count()))
+                    .ToListAsync();
+
+                // Re-order to match ES ranking.
+                var esResult = esIds
+                    .Select(id => fetched.FirstOrDefault(c => c.Id == id))
+                    .Where(c => c is not null)
+                    .Cast<CustomerListItem>()
+                    .ToList();
+
+                return esResult;
+            }
+            // ES returned no results: fall through to EF (may happen with NoOp service or
+            // when ES is empty).
+        }
+
+        // --- EF fallback (original ILIKE path) ---------------------------------------
         var q = _db.Customers.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -42,15 +85,15 @@ public class CustomersController : ControllerBase
 
         IQueryable<Customer> ordered = q.OrderBy(c => c.Id);
 
-        // Paging is OPT-IN: with no pageSize the response is the full list, byte for
-        // byte what it was before. That keeps the payload a bare JSON array, which
+        // Paging is OPT-IN: with no pageSize the response is the whole list, byte for
+        // byte what it was before.  That keeps the payload a bare JSON array, which
         // every existing caller (and CustomersTests) deserialises as List<CustomerListItem>.
         if (pageSize is > 0)
         {
             var size = Math.Min(pageSize.Value, MaxPageSize);
             var p = page < 1 ? 1 : page;
             // The count is the filtered total, taken before Skip/Take, so the client can
-            // render "page 3 of 101". It only runs when paging was actually asked for.
+            // render "page 3 of 101".  It only runs when paging was actually asked for.
             Response.Headers["X-Total-Count"] = (await q.CountAsync()).ToString();
             // Widened to long first: ?page=2147483647 would overflow int here and make
             // Skip throw, turning a silly query string into a 500.
