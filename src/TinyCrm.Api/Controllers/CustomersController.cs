@@ -15,9 +15,14 @@ public class CustomersController : ControllerBase
     private readonly TinyCrmDbContext _db;
     public CustomersController(TinyCrmDbContext db) => _db = db;
 
+    // Largest page a caller may request. Without a cap, ?pageSize=99999999 is a
+    // cheap way to make the server materialise the whole table into memory.
+    private const int MaxPageSize = 200;
+
     [HttpGet]
     public async Task<ActionResult<List<CustomerListItem>>> List(
-        [FromQuery] string? search, [FromQuery] string? status)
+        [FromQuery] string? search, [FromQuery] string? status,
+        [FromQuery] int page = 1, [FromQuery] int? pageSize = null)
     {
         var q = _db.Customers.AsNoTracking().AsQueryable();
 
@@ -33,7 +38,25 @@ public class CustomersController : ControllerBase
         if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<CustomerStatus>(status, true, out var st))
             q = q.Where(c => c.Status == st);
 
-        return await q.OrderBy(c => c.Id)
+        IQueryable<Customer> ordered = q.OrderBy(c => c.Id);
+
+        // Paging is OPT-IN: with no pageSize the response is the full list, byte for
+        // byte what it was before. That keeps the payload a bare JSON array, which
+        // every existing caller (and CustomersTests) deserialises as List<CustomerListItem>.
+        if (pageSize is > 0)
+        {
+            var size = Math.Min(pageSize.Value, MaxPageSize);
+            var p = page < 1 ? 1 : page;
+            // The count is the filtered total, taken before Skip/Take, so the client can
+            // render "page 3 of 101". It only runs when paging was actually asked for.
+            Response.Headers["X-Total-Count"] = (await q.CountAsync()).ToString();
+            // Widened to long first: ?page=2147483647 would overflow int here and make
+            // Skip throw, turning a silly query string into a 500.
+            var skip = (long)(p - 1) * size;
+            ordered = ordered.Skip((int)Math.Min(skip, int.MaxValue)).Take(size);
+        }
+
+        return await ordered
             .Select(c => new CustomerListItem(
                 c.Id, c.Name, c.Company, c.Email, c.Phone,
                 c.Status, c.LastInteractionDate, c.Interactions.Count()))

@@ -21,7 +21,9 @@ export class ApiError extends Error {
 //    itself).
 const EXEMPT_FROM_401_REDIRECT = new Set(['/api/auth/login', '/api/auth/me'])
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+// Same request + error handling as api(), but hands back the Response instead of the
+// parsed body, for the callers that need a header (pagination reads X-Total-Count).
+export async function apiRes(path: string, init: RequestInit = {}): Promise<Response> {
   const res = await fetch(path, {
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
@@ -44,6 +46,11 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(400, 'Validation failed', body.errors)
   }
   if (!res.ok) throw new ApiError(res.status, res.statusText)
+  return res
+}
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await apiRes(path, init)
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }

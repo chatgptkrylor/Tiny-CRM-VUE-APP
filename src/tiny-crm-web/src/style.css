@@ -85,6 +85,10 @@ a:hover { text-decoration: underline; }
 .btn-sm { padding: 3px 8px; font-size: 12px; }
 .btn:disabled { opacity: .5; pointer-events: none; }
 
+.pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 13px; color: #475569; }
+.pagination-controls { display: flex; align-items: center; gap: 10px; }
+.pagination-page { min-width: 110px; text-align: center; }
+
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }

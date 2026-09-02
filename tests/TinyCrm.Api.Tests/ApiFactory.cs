@@ -7,8 +7,12 @@ namespace TinyCrm.Api.Tests;
 
 public class ApiFactory : WebApplicationFactory<Program>
 {
-    public const string TestConnection =
-        @"Server=(localdb)\MSSQLLocalDB;Database=TinyCrmVueTests;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
+    // LocalDB is Windows-only, so the suite could not run anywhere else. The override
+    // lets a Linux/CI box point at its own SQL Server; the database name must stay
+    // TinyCrmVueTests, which DropTestDatabase below still enforces.
+    public static readonly string TestConnection =
+        Environment.GetEnvironmentVariable("TINYCRM_TEST_CONNECTION")
+        ?? @"Server=(localdb)\MSSQLLocalDB;Database=TinyCrmVueTests;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
 
     // Dropped ONCE, here, because a single factory is shared by every test class
     // (see ApiCollection). Dropping from inside a test would race with other classes.
