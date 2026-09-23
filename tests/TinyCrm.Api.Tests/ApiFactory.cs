@@ -20,6 +20,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:TinyCrmVue", TestConnection);
+        // Tests run as Development, whose appsettings enable ES. The index name is fixed,
+        // so leaving it on would write test customers into the dev index. Force NoOp.
+        builder.UseSetting("ElasticSearch:Url", "");
     }
 
     // Drop the test database explicitly, by name, from the maintenance database.

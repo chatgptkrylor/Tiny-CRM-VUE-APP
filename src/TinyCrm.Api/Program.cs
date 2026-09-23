@@ -19,10 +19,10 @@ builder.Services.AddDbContext<TinyCrmDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("TinyCrmVue")));
 
 // --- Elasticsearch wiring ---
-// When ElasticSearch__Url is set (default http://localhost:9200) the real service is
-// registered; otherwise a NoOp fallback is used so the 41 xunit tests keep passing
-// without a running ES instance.
-var esUrl = builder.Configuration["ElasticSearch:Url"] ?? "http://localhost:9200";
+// Opt-in: only when ElasticSearch:Url is set (appsettings.Development.json points it at
+// http://localhost:9200) is the real service registered. Otherwise the NoOp fallback is
+// used and search runs on the EF ILIKE path, so the app boots without a running ES.
+var esUrl = builder.Configuration["ElasticSearch:Url"];
 if (!string.IsNullOrWhiteSpace(esUrl))
 {
     var settings = new ConnectionSettings(new Uri(esUrl))
