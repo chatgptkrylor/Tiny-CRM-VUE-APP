@@ -1,6 +1,8 @@
 import { chromium } from 'playwright'
 
-const BASE = 'http://localhost:5173'
+// Same scripts run against local dev and the deployed site (see contaboplan.md).
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
+const PASSWORD = process.env.ADMIN_PASSWORD ?? 'admin123'
 const TOTAL_CHECKS = 4
 const results = []
 const log = (name, ok, detail = '') => {
@@ -29,7 +31,7 @@ try {
   log('Wrong password shows error', errorText?.includes('Invalid username or password') ?? false, errorText ?? '')
 
   await page.fill('input[name="Username"]', 'admin')
-  await page.fill('input[name="Password"]', 'admin123')
+  await page.fill('input[name="Password"]', PASSWORD)
   await page.click('button[type="submit"]')
   await page.waitForURL(/\/customers/)
   await page.waitForSelector('table.table tbody tr')

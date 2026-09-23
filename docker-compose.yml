@@ -1,0 +1,72 @@
+# TinyCRM stack, deployed to Contabo /opt/tinycrm (see contaboplan.md).
+#   docker compose -f src/docker-compose.yml --env-file .env up -d
+#
+# Isolation, same rules as the other projects on that box:
+#   * only the app publishes a port, and only on loopback (host Caddy proxies to it)
+#   * postgres and elasticsearch publish nothing
+#   * dedicated bridge network, memory caps
+
+name: tinycrm
+
+services:
+  app:
+    build: .
+    image: tinycrm-app:${APP_TAG:-latest}
+    container_name: tinycrm-app
+    depends_on:
+      db: { condition: service_healthy }
+      es: { condition: service_healthy }
+    environment:
+      ConnectionStrings__TinyCrmVue: Host=db;Port=5432;Database=tinycrm;Username=tinycrm;Password=${POSTGRES_PASSWORD:?set in .env}
+      ElasticSearch__Url: http://es:9200
+      # Trust Caddy's X-Forwarded-Proto so the login cookie is marked Secure over https.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    ports:
+      - "127.0.0.1:${APP_PORT:-8096}:8080"
+    volumes:
+      - dpkeys:/home/app/.aspnet/DataProtection-Keys
+    networks: [tinycrm-net]
+    restart: unless-stopped
+    deploy: { resources: { limits: { memory: 512m } } }
+
+  db:
+    image: postgres:16
+    container_name: tinycrm-db
+    environment:
+      POSTGRES_DB: tinycrm
+      POSTGRES_USER: tinycrm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [tinycrm-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tinycrm -d tinycrm"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+    deploy: { resources: { limits: { memory: 1g } } }
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: tinycrm-es
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks: [tinycrm-net]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s'"]
+      interval: 10s
+      retries: 30
+    restart: unless-stopped
+    deploy: { resources: { limits: { memory: 1536m } } }
+
+volumes:
+  pgdata:
+  esdata:
+  dpkeys:
+
+networks:
+  tinycrm-net:

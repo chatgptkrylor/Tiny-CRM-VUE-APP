@@ -1,6 +1,8 @@
 import { chromium, request } from 'playwright'
 
-const BASE = 'http://localhost:5173'
+// Same scripts run against local dev and the deployed site (see contaboplan.md).
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
+const PASSWORD = process.env.ADMIN_PASSWORD ?? 'admin123'
 const results = []
 const log = (name, ok, detail = '') => {
   results.push({ name, ok })
@@ -39,14 +41,14 @@ async function main() {
   // log pageA in via the real UI form so pageA has a genuine browser session
   // (needed later for check 18 - reload must survive a REAL logged-in session)
   await pageA.fill('input[name="Username"]', 'admin')
-  await pageA.fill('input[name="Password"]', 'admin123')
+  await pageA.fill('input[name="Password"]', PASSWORD)
   await pageA.click('button[type="submit"]')
   await pageA.waitForURL(/\/customers/)
   await pageA.waitForSelector('table.table tbody tr')
 
   // ---------- login + capture raw cookie for replay/tamper tests ----------
   const authApi = await newApi()
-  const loginRes = await authApi.post('/api/auth/login', { data: { username: 'admin', password: 'admin123' } })
+  const loginRes = await authApi.post('/api/auth/login', { data: { username: 'admin', password: PASSWORD } })
   const preLogoutState = await authApi.storageState()
   const authCookie = preLogoutState.cookies.find(c => c.name === 'tinycrm.auth')
   if (loginRes.status() !== 200 || !authCookie) {
@@ -76,13 +78,13 @@ async function main() {
 
   // ---------- 6: CSRF posture - form-urlencoded login rejected ----------
   const formCtx = await newApi()
-  const formRes = await formCtx.post('/api/auth/login', { form: { Username: 'admin', Password: 'admin123' } })
+  const formRes = await formCtx.post('/api/auth/login', { form: { Username: 'admin', Password: PASSWORD } })
   log('6. POST login as application/x-www-form-urlencoded -> 415 (JSON-only API, no anti-forgery token needed)',
     formRes.status() === 415, `status=${formRes.status()}`)
 
   // ---------- 7: cookie attributes on login response ----------
   const cookieCtx = await newApi()
-  const cookieLoginRes = await cookieCtx.post('/api/auth/login', { data: { username: 'admin', password: 'admin123' } })
+  const cookieLoginRes = await cookieCtx.post('/api/auth/login', { data: { username: 'admin', password: PASSWORD } })
   const setCookieHeaders = cookieLoginRes.headersArray().filter(h => h.name.toLowerCase() === 'set-cookie')
   const authSetCookie = setCookieHeaders.find(h => h.value.startsWith('tinycrm.auth='))?.value ?? ''
   const hasHttpOnly = /httponly/i.test(authSetCookie)
@@ -92,7 +94,7 @@ async function main() {
 
   // fresh authenticated context for the injection / input-edge-case checks (8,9,14,15)
   const api2 = await newApi()
-  const login2 = await api2.post('/api/auth/login', { data: { username: 'admin', password: 'admin123' } })
+  const login2 = await api2.post('/api/auth/login', { data: { username: 'admin', password: PASSWORD } })
   if (login2.status() !== 200) {
     console.log('FATAL: second setup login failed, cannot continue with authenticated checks')
     process.exitCode = 1
@@ -122,7 +124,7 @@ async function main() {
   pageB.on('dialog', async (d) => { dialogFired = true; await d.dismiss() })
   await pageB.goto(BASE + '/login', { waitUntil: 'domcontentloaded' })
   await pageB.fill('input[name="Username"]', 'admin')
-  await pageB.fill('input[name="Password"]', 'admin123')
+  await pageB.fill('input[name="Password"]', PASSWORD)
   await pageB.click('button[type="submit"]')
   await pageB.waitForURL(/\/customers/)
   const xssPayload = '<script>window.__xss_fired = true</script><img src=x onerror="window.__xss_fired=true">'
@@ -151,7 +153,7 @@ async function main() {
   // ---------- 12: empty credentials -> 401 never 500 ----------
   const emptyCases = [
     { username: '', password: '' },
-    { username: '', password: 'admin123' },
+    { username: '', password: PASSWORD },
     { username: 'admin', password: '' },
   ]
   const emptyStatuses = []
@@ -165,9 +167,9 @@ async function main() {
 
   // ---------- 13: username case-insensitive, password case-sensitive ----------
   const upUser = await newApi()
-  const upUserRes = await upUser.post('/api/auth/login', { data: { username: 'ADMIN', password: 'admin123' } })
+  const upUserRes = await upUser.post('/api/auth/login', { data: { username: 'ADMIN', password: PASSWORD } })
   const upPass = await newApi()
-  const upPassRes = await upPass.post('/api/auth/login', { data: { username: 'admin', password: 'ADMIN123' } })
+  const upPassRes = await upPass.post('/api/auth/login', { data: { username: 'admin', password: PASSWORD.toUpperCase() } })
   log('13. Username case-insensitive (ADMIN works), password case-sensitive (ADMIN123 fails)',
     upUserRes.status() === 200 && upPassRes.status() === 401,
     `usernameCaseStatus=${upUserRes.status()} passwordCaseStatus=${upPassRes.status()}`)

@@ -13,7 +13,10 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://localhost:5174");
+// Dev only: the Vite proxy targets 5174. In the container (Production) the aspnet
+// image's ASPNETCORE_HTTP_PORTS=8080 applies instead.
+if (builder.Environment.IsDevelopment())
+    builder.WebHost.UseUrls("http://localhost:5174");
 
 builder.Services.AddDbContext<TinyCrmDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("TinyCrmVue")));
