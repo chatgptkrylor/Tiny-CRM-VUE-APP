@@ -40,12 +40,6 @@ async function submit() {
 
         <button type="submit" class="btn btn-primary btn-block">Sign in</button>
       </form>
-
-      <div class="hint">
-        <strong>Demo accounts:</strong><br />
-        admin / admin123<br />
-        demo / demo123
-      </div>
     </div>
   </div>
 </template>
